@@ -1,0 +1,65 @@
+name: EAS Production Submit
+
+# Manual trigger — run this when the team is ready to push to App Store / Play Store.
+# Required secrets: EXPO_TOKEN, APPLE_ID, ASC_APP_ID, APPLE_TEAM_ID,
+#                   GOOGLE_SERVICE_ACCOUNT_JSON
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "Platform to build and submit"
+        required: true
+        default: "all"
+        type: choice
+        options: [ios, android, all]
+      release_notes:
+        description: "What's new in this release (shown in stores)"
+        required: false
+        default: "Bug fixes and performance improvements."
+
+jobs:
+  build-and-submit:
+    name: Build & submit to stores
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: chefsnap-app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: chefsnap-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Write Google service account key
+        run: echo '${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}' > google-service-account.json
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build production
+        run: |
+          eas build \
+            --platform ${{ github.event.inputs.platform }} \
+            --profile production \
+            --non-interactive
+
+      - name: Submit to App Store / Play Store
+        run: |
+          eas submit \
+            --platform ${{ github.event.inputs.platform }} \
+            --profile production \
+            --non-interactive
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          ASC_APP_ID: ${{ secrets.ASC_APP_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}

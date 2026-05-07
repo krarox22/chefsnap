@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "ChefSnap",
+    "slug": "chefsnap",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.chefsnap.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "ChefSnap needs camera access to scan your ingredients.",
+        "NSPhotoLibraryUsageDescription": "ChefSnap needs photo library access to pick ingredient photos."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FF6B35"
+      },
+      "package": "com.chefsnap.app",
+      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE"]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        { "cameraPermission": "ChefSnap needs camera access to scan your ingredients." }
+      ],
+      [
+        "expo-image-picker",
+        { "photosPermission": "ChefSnap needs photo library access to pick ingredient photos." }
+      ]
+    ],
+    "scheme": "chefsnap"
+  }
+}

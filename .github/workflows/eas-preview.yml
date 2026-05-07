@@ -1,0 +1,56 @@
+name: EAS Preview Build
+
+# Runs on every push to main that touches the app.
+# Builds for iOS (TestFlight) and Android (Play Internal Track).
+# Required secrets: EXPO_TOKEN, APPLE_ID, ASC_APP_ID, APPLE_TEAM_ID
+# The android google-service-account.json must be stored as GOOGLE_SERVICE_ACCOUNT_JSON secret.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "chefsnap-app/**"
+
+jobs:
+  build-and-distribute:
+    name: Build preview & distribute
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: chefsnap-app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: chefsnap-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Write Google service account key
+        run: echo '${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}' > google-service-account.json
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build iOS preview
+        run: eas build --platform ios --profile preview --non-interactive
+
+      - name: Build Android preview
+        run: eas build --platform android --profile preview --non-interactive
+
+      - name: Submit iOS → TestFlight
+        run: eas submit --platform ios --profile preview --non-interactive
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          ASC_APP_ID: ${{ secrets.ASC_APP_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Submit Android → Play Internal
+        run: eas submit --platform android --profile preview --non-interactive

@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ChefSnap — API Tester</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f5; color: #222; }
+    header { background: #e8441a; color: white; padding: 18px 28px; display: flex; align-items: center; gap: 12px; }
+    header h1 { font-size: 1.3rem; font-weight: 700; }
+    header span { font-size: 1.6rem; }
+    .status-bar { background: #fff; border-bottom: 1px solid #ddd; padding: 10px 28px; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: #ccc; display: inline-block; }
+    .dot.green { background: #22c55e; }
+    .dot.red { background: #ef4444; }
+    main { max-width: 860px; margin: 28px auto; padding: 0 16px; display: flex; flex-direction: column; gap: 20px; }
+    section { background: white; border-radius: 10px; padding: 22px 24px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    section h2 { font-size: 1rem; font-weight: 600; margin-bottom: 16px; color: #444; text-transform: uppercase; letter-spacing: .04em; }
+    label { display: block; font-size: 0.88rem; font-weight: 500; margin-bottom: 5px; color: #555; }
+    input, select, textarea { width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.93rem; font-family: inherit; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #e8441a; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+    button { background: #e8441a; color: white; border: none; padding: 10px 22px; border-radius: 6px; font-size: 0.93rem; font-weight: 600; cursor: pointer; margin-top: 16px; }
+    button:hover { background: #c93a15; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    button.secondary { background: #555; }
+    button.secondary:hover { background: #333; }
+    .result { margin-top: 16px; background: #1e1e1e; color: #d4d4d4; border-radius: 8px; padding: 16px; font-family: "SF Mono", monospace; font-size: 0.82rem; max-height: 340px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; display: none; }
+    .result.visible { display: block; }
+    .tag { display: inline-block; background: #fef2ed; color: #e8441a; border: 1px solid #f5c6b5; border-radius: 4px; padding: 3px 9px; font-size: 0.8rem; margin: 3px; cursor: pointer; }
+    .tag:hover { background: #e8441a; color: white; }
+    .tag.detected { background: #f0fdf4; color: #16a34a; border-color: #86efac; }
+    .tag.detected:hover { background: #16a34a; color: white; }
+    .chips { margin-bottom: 10px; }
+    .chips-label { font-size: 0.8rem; color: #888; margin-bottom: 6px; }
+    .recipe-card { border: 1px solid #eee; border-radius: 8px; padding: 14px; margin-top: 10px; }
+    .recipe-card h3 { font-size: 1rem; color: #222; }
+    .recipe-card .meta { font-size: 0.82rem; color: #666; margin-top: 4px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; margin-right: 4px; }
+    .badge.indian { background: #fef2ed; color: #e8441a; }
+    .badge.match { background: #f0fdf4; color: #16a34a; }
+    .recipe-grid { display: flex; flex-direction: column; gap: 8px; margin-top: 0; }
+    .error-msg { color: #ef4444; font-size: 0.88rem; margin-top: 8px; display: none; }
+
+    /* ── Image upload drop zone ── */
+    .drop-zone { border: 2px dashed #ddd; border-radius: 10px; padding: 32px 20px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; color: #888; }
+    .drop-zone:hover, .drop-zone.dragover { border-color: #e8441a; background: #fff8f6; color: #e8441a; }
+    .drop-zone input[type=file] { display: none; }
+    .drop-zone .icon { font-size: 2.4rem; margin-bottom: 8px; }
+    .drop-zone p { font-size: 0.9rem; }
+    .drop-zone small { font-size: 0.78rem; color: #bbb; }
+    .thumb-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+    .thumb-wrap { position: relative; width: 80px; height: 80px; }
+    .thumb-wrap img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 2px solid #eee; }
+    .thumb-wrap button { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; padding: 0; margin: 0; border-radius: 50%; font-size: 0.7rem; line-height: 20px; text-align: center; }
+    .conf-bar { height: 4px; border-radius: 2px; background: #e5e7eb; margin-top: 4px; }
+    .conf-fill { height: 4px; border-radius: 2px; background: #22c55e; }
+    .ing-detected { border: 1px solid #eee; border-radius: 8px; padding: 10px 12px; margin-top: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 0.88rem; }
+    .ing-detected .name { font-weight: 500; }
+    .ing-detected .conf { font-size: 0.78rem; color: #888; }
+    .step-arrow { text-align: center; font-size: 1.5rem; color: #e8441a; margin: -8px 0; }
+  </style>
+</head>
+<body>
+
+<header>
+  <span>🍳</span>
+  <h1>ChefSnap API Tester</h1>
+</header>
+
+<div class="status-bar">
+  <span class="dot" id="health-dot"></span>
+  <span id="health-text">Checking server…</span>
+  <button class="secondary" style="margin-top:0;padding:5px 14px;font-size:0.8rem;" onclick="checkHealth()">Refresh</button>
+</div>
+
+<main>
+
+  <!-- ── STEP 1: DETECT INGREDIENTS ────────────────────────────────── -->
+  <section>
+    <h2>📷 Step 1 — Detect Ingredients from Photo</h2>
+
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()"
+         ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+      <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" multiple onchange="onFileChange(event)" />
+      <div class="icon">📸</div>
+      <p>Tap to choose photos or drag &amp; drop here</p>
+      <small>Up to 5 images · JPEG, PNG, WebP · max 10 MB each</small>
+    </div>
+
+    <div class="thumb-row" id="thumb-row"></div>
+
+    <div style="display:flex;gap:10px;align-items:center;">
+      <button id="detect-btn" onclick="detectIngredients()" disabled>Detect Ingredients</button>
+      <button class="secondary" style="margin-top:16px;" onclick="clearDetect()">Clear</button>
+      <span id="detect-timer" style="margin-top:16px;font-size:0.85rem;color:#888;display:none;"></span>
+    </div>
+    <div class="error-msg" id="detect-error"></div>
+
+    <div id="detected-list" style="margin-top:14px;display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <label style="margin:0;">Detected ingredients <span id="detected-count" style="color:#888;font-weight:400;"></span></label>
+        <button style="margin:0;padding:6px 16px;font-size:0.82rem;" onclick="useDetectedIngredients()">Use these → Find Recipes</button>
+      </div>
+      <div id="detected-items"></div>
+      <div id="allergen-banner" style="display:none;background:#fef9c3;border:1px solid #fde047;border-radius:6px;padding:10px 14px;margin-top:10px;font-size:0.85rem;color:#713f12;"></div>
+    </div>
+  </section>
+
+  <div class="step-arrow">↓</div>
+
+  <!-- ── STEP 2: SUGGEST RECIPES ────────────────────────────────────── -->
+  <section>
+    <h2>🥘 Step 2 — Suggest Recipes</h2>
+
+    <div style="margin-bottom:14px;">
+      <label>Ingredients (comma-separated)</label>
+      <input type="text" id="ingredients" placeholder="tomato, paneer, onion, ginger, garlic" />
+      <div class="chips" style="margin-top:8px;">
+        <div class="chips-label">Quick add:</div>
+        <span class="tag" onclick="addIngredient('paneer')">paneer</span>
+        <span class="tag" onclick="addIngredient('tomato')">tomato</span>
+        <span class="tag" onclick="addIngredient('onion')">onion</span>
+        <span class="tag" onclick="addIngredient('ginger')">ginger</span>
+        <span class="tag" onclick="addIngredient('garlic')">garlic</span>
+        <span class="tag" onclick="addIngredient('coriander')">coriander</span>
+        <span class="tag" onclick="addIngredient('cumin')">cumin</span>
+        <span class="tag" onclick="addIngredient('rice')">rice</span>
+        <span class="tag" onclick="addIngredient('dal')">dal</span>
+        <span class="tag" onclick="addIngredient('spinach')">spinach</span>
+        <span class="tag" onclick="addIngredient('potato')">potato</span>
+        <span class="tag" onclick="addIngredient('chicken')">chicken</span>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Cuisine preference</label>
+        <select id="cuisine_preference">
+          <option value="indian_first">Indian First (default)</option>
+          <option value="any">Any cuisine</option>
+        </select>
+      </div>
+      <div>
+        <label>Diet</label>
+        <select id="diet">
+          <option value="any">Any</option>
+          <option value="vegetarian">Vegetarian</option>
+          <option value="vegan">Vegan</option>
+          <option value="jain">Jain</option>
+          <option value="halal">Halal</option>
+          <option value="gluten-free">Gluten-free</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row3" style="margin-top:14px;">
+      <div>
+        <label>Spice level</label>
+        <select id="spice_level">
+          <option value="mild">Mild</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hot">Hot</option>
+          <option value="extra_hot">Extra Hot</option>
+        </select>
+      </div>
+      <div>
+        <label>Max cook time (min)</label>
+        <input type="number" id="max_cook_time" value="45" min="5" max="480" />
+      </div>
+      <div>
+        <label>Servings</label>
+        <input type="number" id="servings" value="2" min="1" max="20" />
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;align-items:center;">
+      <button onclick="suggestRecipes()">Find Recipes</button>
+      <button class="secondary" style="margin-top:16px;" onclick="clearSuggest()">Clear</button>
+      <span id="suggest-timer" style="margin-top:16px;font-size:0.85rem;color:#888;display:none;"></span>
+    </div>
+    <div class="error-msg" id="suggest-error"></div>
+    <div class="recipe-grid" id="recipe-cards"></div>
+    <div class="result" id="suggest-raw"></div>
+  </section>
+
+  <!-- ── FEEDBACK ────────────────────────────────────────────────── -->
+  <section>
+    <h2>⭐ Submit Feedback</h2>
+    <div class="row">
+      <div>
+        <label>Rating (1–5)</label>
+        <input type="number" id="fb-rating" value="5" min="1" max="5" />
+      </div>
+      <div>
+        <label>Comment (optional)</label>
+        <input type="text" id="fb-comment" placeholder="Great recipes!" />
+      </div>
+    </div>
+    <button onclick="submitFeedback()">Submit</button>
+    <div class="result" id="feedback-result"></div>
+  </section>
+
+  <!-- ── METRICS ─────────────────────────────────────────────────── -->
+  <section>
+    <h2>📊 Server Metrics</h2>
+    <button onclick="fetchMetrics()">Load Metrics</button>
+    <div class="result" id="metrics-result"></div>
+  </section>
+
+</main>
+
+<script>
+const BASE = "http://localhost:8000";
+let selectedFiles = [];
+let _timerInterval = null;
+let _detectTimerInterval = null;
+
+// ── Health ──────────────────────────────────────────────────────────
+async function checkHealth() {
+  const dot = document.getElementById("health-dot");
+  const text = document.getElementById("health-text");
+  try {
+    const r = await fetch(`${BASE}/health`);
+    const d = await r.json();
+    dot.className = "dot green";
+    text.textContent = `Server is running — version ${d.version}`;
+  } catch {
+    dot.className = "dot red";
+    text.textContent = "Cannot reach server. Run: uvicorn main:app --reload";
+  }
+}
+
+// ── Image upload ────────────────────────────────────────────────────
+function onDragOver(e) { e.preventDefault(); document.getElementById("drop-zone").classList.add("dragover"); }
+function onDragLeave(e) { document.getElementById("drop-zone").classList.remove("dragover"); }
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById("drop-zone").classList.remove("dragover");
+  addFiles([...e.dataTransfer.files]);
+}
+function onFileChange(e) { addFiles([...e.target.files]); e.target.value = ""; }
+
+function addFiles(files) {
+  for (const f of files) {
+    if (selectedFiles.length >= 5) break;
+    if (!f.type.startsWith("image/")) continue;
+    selectedFiles.push(f);
+  }
+  renderThumbs();
+}
+
+function renderThumbs() {
+  const row = document.getElementById("thumb-row");
+  row.innerHTML = "";
+  selectedFiles.forEach((f, i) => {
+    const url = URL.createObjectURL(f);
+    row.innerHTML += `
+      <div class="thumb-wrap">
+        <img src="${url}" alt="${f.name}" />
+        <button onclick="removeFile(${i})">✕</button>
+      </div>`;
+  });
+  document.getElementById("detect-btn").disabled = selectedFiles.length === 0;
+}
+
+function removeFile(i) {
+  selectedFiles.splice(i, 1);
+  renderThumbs();
+}
+
+function clearDetect() {
+  selectedFiles = [];
+  renderThumbs();
+  document.getElementById("detected-list").style.display = "none";
+  document.getElementById("detected-items").innerHTML = "";
+  hideError("detect-error");
+}
+
+// ── Detect ──────────────────────────────────────────────────────────
+async function detectIngredients() {
+  if (!selectedFiles.length) return;
+  hideError("detect-error");
+
+  const timerEl = document.getElementById("detect-timer");
+  timerEl.style.display = "inline";
+  const start = Date.now();
+  clearInterval(_detectTimerInterval);
+  _detectTimerInterval = setInterval(() => {
+    timerEl.textContent = `${((Date.now() - start) / 1000).toFixed(1)}s`;
+  }, 200);
+
+  const form = new FormData();
+  selectedFiles.forEach(f => form.append("files", f));
+
+  try {
+    const r = await fetch(`${BASE}/api/v1/ingredients/detect`, { method: "POST", body: form });
+    clearInterval(_detectTimerInterval);
+    timerEl.style.display = "none";
+    const data = await r.json();
+
+    if (!r.ok) { showError("detect-error", data.detail || "Detection failed"); return; }
+
+    const listEl = document.getElementById("detected-list");
+    const itemsEl = document.getElementById("detected-items");
+    const countEl = document.getElementById("detected-count");
+    const bannerEl = document.getElementById("allergen-banner");
+
+    countEl.textContent = `(${data.ingredients.length} found)`;
+    itemsEl.innerHTML = "";
+
+    data.ingredients.forEach(ing => {
+      const pct = Math.round(ing.confidence * 100);
+      itemsEl.innerHTML += `
+        <div class="ing-detected">
+          <div>
+            <span class="name">${ing.display_name}</span>
+            <div class="conf-bar"><div class="conf-fill" style="width:${pct}%"></div></div>
+          </div>
+          <span class="conf">${pct}% confidence · ${ing.quantity_hint}</span>
+        </div>`;
+    });
+
+    if (data.allergen_warnings && data.allergen_warnings.length) {
+      bannerEl.style.display = "block";
+      bannerEl.innerHTML = `⚠️ <strong>Allergen warning:</strong> ${data.allergen_warnings.join(", ")}`;
+    } else {
+      bannerEl.style.display = "none";
+    }
+
+    listEl.style.display = "block";
+  } catch {
+    clearInterval(_detectTimerInterval);
+    document.getElementById("detect-timer").style.display = "none";
+    showError("detect-error", "Server not reachable or vision API key missing.");
+  }
+}
+
+function useDetectedIngredients() {
+  const items = document.querySelectorAll("#detected-items .ing-detected .name");
+  const names = [...items].map(el => el.textContent.trim());
+  document.getElementById("ingredients").value = names.join(", ");
+  document.getElementById("ingredients").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+// ── Suggest ─────────────────────────────────────────────────────────
+function addIngredient(name) {
+  const el = document.getElementById("ingredients");
+  const current = el.value.split(",").map(s => s.trim()).filter(Boolean);
+  if (!current.includes(name)) current.push(name);
+  el.value = current.join(", ");
+}
+
+async function suggestRecipes() {
+  const raw = document.getElementById("ingredients").value;
+  const ingredients = raw.split(",").map(s => s.trim()).filter(Boolean);
+  if (!ingredients.length) { showError("suggest-error", "Add at least one ingredient."); return; }
+  hideError("suggest-error");
+
+  const body = {
+    ingredients,
+    preferences: {
+      cuisine_preference: document.getElementById("cuisine_preference").value,
+      diet: document.getElementById("diet").value,
+      spice_level: document.getElementById("spice_level").value,
+      max_cook_time_minutes: parseInt(document.getElementById("max_cook_time").value),
+      servings: parseInt(document.getElementById("servings").value),
+    }
+  };
+
+  const cardsEl = document.getElementById("recipe-cards");
+  const rawEl = document.getElementById("suggest-raw");
+  const timerEl = document.getElementById("suggest-timer");
+
+  cardsEl.innerHTML = '<p style="color:#888;font-size:.9rem;margin-top:10px;">Calling AI agent + Tavily search…</p>';
+  timerEl.style.display = "inline";
+  const start = Date.now();
+  clearInterval(_timerInterval);
+  _timerInterval = setInterval(() => {
+    timerEl.textContent = `${((Date.now() - start) / 1000).toFixed(1)}s`;
+  }, 200);
+
+  try {
+    const r = await fetch(`${BASE}/api/v1/recipes/suggest`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    clearInterval(_timerInterval);
+    timerEl.style.display = "none";
+    const data = await r.json();
+
+    if (!r.ok) { showError("suggest-error", data.detail || "Error from server"); cardsEl.innerHTML = ""; return; }
+
+    cardsEl.innerHTML = "";
+    if (data.recipes && data.recipes.length) {
+      data.recipes.forEach(rec => {
+        cardsEl.innerHTML += `
+          <div class="recipe-card">
+            <h3>${rec.name}</h3>
+            <div class="meta">
+              ${rec.is_indian ? '<span class="badge indian">🇮🇳 Indian</span>' : ''}
+              <span class="badge match">✓ ${rec.match_percent}% match</span>
+              <span style="color:#888">· ${rec.cuisine} · ${rec.cook_time_minutes} min · ${rec.difficulty}</span>
+            </div>
+            <p style="font-size:.87rem;color:#555;margin-top:6px;">${rec.summary}</p>
+            ${rec.missing_ingredients.length ? `<p style="font-size:.8rem;color:#e8441a;margin-top:4px;">Missing: ${rec.missing_ingredients.join(", ")}</p>` : ""}
+            ${rec.source_url ? `<a href="${rec.source_url}" target="_blank" style="font-size:.8rem;color:#3b82f6;margin-top:4px;display:inline-block;">View recipe ↗</a>` : ""}
+          </div>`;
+      });
+    } else {
+      cardsEl.innerHTML = '<p style="color:#888;font-size:.9rem;margin-top:10px;">No recipes returned.</p>';
+    }
+
+    rawEl.textContent = JSON.stringify(data, null, 2);
+    rawEl.classList.add("visible");
+  } catch (e) {
+    clearInterval(_timerInterval);
+    timerEl.style.display = "none";
+    showError("suggest-error", "Server not reachable. Is uvicorn running?");
+    cardsEl.innerHTML = "";
+  }
+}
+
+function clearSuggest() {
+  document.getElementById("ingredients").value = "";
+  document.getElementById("recipe-cards").innerHTML = "";
+  const rawEl = document.getElementById("suggest-raw");
+  rawEl.textContent = "";
+  rawEl.classList.remove("visible");
+}
+
+// ── Feedback ────────────────────────────────────────────────────────
+async function submitFeedback() {
+  const body = {
+    rating: parseInt(document.getElementById("fb-rating").value),
+    comment: document.getElementById("fb-comment").value,
+  };
+  const el = document.getElementById("feedback-result");
+  try {
+    const r = await fetch(`${BASE}/api/v1/feedback`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await r.json();
+    el.textContent = JSON.stringify(data, null, 2);
+    el.classList.add("visible");
+  } catch {
+    el.textContent = "Error — is the server running?";
+    el.classList.add("visible");
+  }
+}
+
+// ── Metrics ─────────────────────────────────────────────────────────
+async function fetchMetrics() {
+  const el = document.getElementById("metrics-result");
+  try {
+    const r = await fetch(`${BASE}/api/v1/metrics`);
+    const data = await r.json();
+    el.textContent = JSON.stringify(data, null, 2);
+    el.classList.add("visible");
+  } catch {
+    el.textContent = "Error — is the server running?";
+    el.classList.add("visible");
+  }
+}
+
+function showError(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.style.display = "block"; }
+function hideError(id) { document.getElementById(id).style.display = "none"; }
+
+checkHealth();
+</script>
+</body>
+</html>

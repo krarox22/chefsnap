@@ -215,3 +215,8 @@ npm-debug.log*
 
 # macOS
 .DS_Store
+
+# Local development configuration
+.claude/
+.codex/
+docs/superpowers/
